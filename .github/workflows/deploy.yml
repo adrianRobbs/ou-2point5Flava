@@ -1,0 +1,58 @@
+name: Deploy to Render
+
+# Every service in render.yaml has autoDeployTrigger: off, so nothing on
+# Render moves on its own — this workflow is the only thing that deploys.
+# Triggered on a pushed tag (e.g. `v1.3.0`), not on pushes to main, so
+# development keeps moving without exposing unfinished work: cut a tag
+# only when a state is actually meant to go live.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag commit
+        id: commit
+        run: echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      # Deploys the exact commit the tag points at via Render's API, not a
+      # bare deploy-hook ping — a deploy hook redeploys whatever the
+      # service's tracked branch currently has at HEAD, which is not
+      # necessarily this tag if main has moved since. commitId pins it.
+      - name: Trigger deploy — web service
+        run: |
+          curl -f -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_WEB_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"commitId\": \"${{ steps.commit.outputs.sha }}\"}"
+
+      # The 3 cron services below are commented out in render.yaml while on
+      # the free plan (see the header comment there) — they don't exist on
+      # Render right now, so deploying them here too would just fail against
+      # an empty/nonexistent service ID. Uncomment together with render.yaml
+      # once back on a paid plan, and re-add the matching RENDER_*_CRON_ID
+      # GitHub secrets first.
+      #
+      # - name: Trigger deploy — discover-fixtures cron
+      #   run: |
+      #     curl -f -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_DISCOVER_CRON_ID }}/deploys" \
+      #       -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"commitId\": \"${{ steps.commit.outputs.sha }}\"}"
+      #
+      # - name: Trigger deploy — refresh-odds (daytime) cron
+      #   run: |
+      #     curl -f -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_REFRESH_DAYTIME_CRON_ID }}/deploys" \
+      #       -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"commitId\": \"${{ steps.commit.outputs.sha }}\"}"
+      #
+      # - name: Trigger deploy — refresh-odds (late) cron
+      #   run: |
+      #     curl -f -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_REFRESH_LATE_CRON_ID }}/deploys" \
+      #       -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"commitId\": \"${{ steps.commit.outputs.sha }}\"}"

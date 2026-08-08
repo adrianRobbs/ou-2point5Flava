@@ -1,0 +1,95 @@
+# Deploys are gated on git tags, not pushes to main — see
+# .github/workflows/deploy.yml. autoDeployTrigger: off means Render never
+# deploys on its own; the workflow resolves a pushed tag's commit SHA and
+# calls Render's deploy API explicitly, so development can continue on main
+# without going live.
+#
+# Web service only, on the free tier, for now — cost is a constraint right
+# now and Render has no free tier for Cron Jobs or one-off Jobs at all
+# ("Other service types don't support Free instances" — confirmed against
+# Render's docs, not assumed), and a free web service additionally can't use
+# one-off Jobs even if we paid for those separately. That's why the backfill
+# "Sync" button existing feature is currently a placeholder against an
+# unconfigured RENDER_API_KEY/RENDER_SERVICE_ID (returns 501) rather than
+# wired up — it needs a paid base service to ever work.
+#
+# The 3 cron services that used to live here (discover-fixtures,
+# refresh-odds x2) are commented out below rather than deleted, so the
+# schedule/config is preserved for whenever the plan changes back to paid.
+# In their place: two manual-trigger buttons on the webapp's Backfill page
+# (see webapp/routers/sync.py) that run the same discover/refresh logic
+# synchronously, in-process, on click — no Job needed, so it works on free.
+
+services:
+  - type: web
+    name: ou25-webapp
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    autoDeployTrigger: off
+    healthCheckPath: /api/dates
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: THESTATSAPI_KEY
+        sync: false
+      - key: THESTATSAPI_BASE_URL
+        value: https://api.thestatsapi.com/api
+      - key: THESTATSAPI_RATE_LIMIT_PER_MIN
+        value: "120"
+      - key: LOG_LEVEL
+        value: INFO
+      # Backfill-management page (webapp/routers/backfill.py). Left set (or
+      # not) regardless of plan — on the free tier the Sync button will
+      # always 501 no matter what these are set to, since Jobs require a
+      # paid base service; that's a Render-side constraint, not something
+      # these values can work around.
+      - key: RENDER_API_KEY
+        sync: false
+      - key: RENDER_SERVICE_ID
+        sync: false
+      - key: BACKFILL_ADMIN_TOKEN
+        sync: false
+
+  # --- Commented out while on the free plan: Render has no free tier for
+  # Cron Jobs (confirmed against their docs), and these would fail/bill
+  # regardless of the web service's own plan. Uncomment and re-add the env
+  # vars (see the web service above for the same list) once ready to pay
+  # for scheduled execution again. Until then, webapp/routers/sync.py's
+  # manual "Discover fixtures" / "Refresh odds" buttons cover the same
+  # ground on demand, from the free web service itself.
+  #
+  # - type: cron
+  #   name: ou25-discover-fixtures
+  #   runtime: python
+  #   buildCommand: pip install uv && uv sync --frozen --no-dev
+  #   startCommand: uv run ou25-pipeline discover-fixtures
+  #   schedule: "0 22 * * *" # ~2h before UTC midnight — see market/live.py for why this timing
+  #   plan: starter
+  #   autoDeployTrigger: off
+  #
+  # Refresh runs three times a day. A single cron expression can't express
+  # 08:00 / 17:00 / 00:45 together — the 08:00/17:00 pair shares minute=0
+  # and combines into one line, but 00:45 needs a different minute value,
+  # which standard 5-field cron can't mix into the same expression without
+  # also firing at unwanted combinations (e.g. 08:45, 00:00). Two services,
+  # not one, is the correct shape here, not a workaround.
+  #
+  # - type: cron
+  #   name: ou25-refresh-odds-daytime
+  #   runtime: python
+  #   buildCommand: pip install uv && uv sync --frozen --no-dev
+  #   startCommand: uv run ou25-pipeline refresh-odds
+  #   schedule: "0 8,17 * * *" # 08:00 and 17:00 UTC
+  #   plan: starter
+  #   autoDeployTrigger: off
+  #
+  # - type: cron
+  #   name: ou25-refresh-odds-late
+  #   runtime: python
+  #   buildCommand: pip install uv && uv sync --frozen --no-dev
+  #   startCommand: uv run ou25-pipeline refresh-odds
+  #   schedule: "45 0 * * *" # 00:45 UTC — catches matches kicking off just before midnight
+  #   plan: starter
+  #   autoDeployTrigger: off

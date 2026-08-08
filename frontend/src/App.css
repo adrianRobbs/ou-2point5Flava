@@ -1,0 +1,111 @@
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.app__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.app__eyebrow {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.app__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  letter-spacing: -0.01em;
+}
+
+.app__nav {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.nav-link {
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.nav-link:hover {
+  color: var(--color-text-primary);
+}
+
+.nav-link--active {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.theme-toggle {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  transition: border-color var(--motion-fast);
+}
+
+.theme-toggle:hover {
+  border-color: var(--color-accent);
+}
+
+.app__matchday {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.app__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.app__summary strong {
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+}
+
+.app__loading,
+.app__empty {
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--color-text-meta);
+  font-size: var(--text-sm);
+}
+
+.app__error {
+  padding: var(--space-3) var(--space-4);
+  background: color-mix(in srgb, var(--color-miss) 12%, transparent);
+  border: 1px solid var(--color-miss);
+  border-radius: var(--radius-sm);
+  color: var(--color-miss);
+  font-size: var(--text-sm);
+}

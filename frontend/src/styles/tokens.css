@@ -1,0 +1,140 @@
+/* Design language: a matchday coupon crossed with a trading terminal — the
+   two real-world artifacts this product's data actually resembles (a
+   printed betting slip's row structure; a price ticker's tabular numerals).
+   Deliberately not cream+serif, not near-black+neon, not broadsheet-hairline
+   — see frontend-design skill notes for why those were ruled out.
+
+   Three-layer token structure (primitive -> semantic -> component), per the
+   design-system skill: components should only ever reference the semantic
+   "--color-", "--text-", and "--space-" names below, never a "--raw-"
+   primitive or a hex code directly. */
+
+:root {
+  /* ---- Primitives: raw values, never referenced outside this file ---- */
+  --raw-pitch-950: #0e1512;
+  --raw-pitch-900: #141f19;
+  --raw-pitch-800: #1c2b23;
+  --raw-pitch-700: #26392f;
+
+  --raw-turf-600: #2f6b4f;
+  --raw-turf-400: #4c8567;
+
+  --raw-chalk-050: #f5f2ea;
+  --raw-chalk-100: #eae6d9;
+  --raw-chalk-300: #c9c4b4;
+
+  --raw-slate-400: #7c8b8a;
+  --raw-slate-600: #55635f;
+
+  --raw-flare-400: #ee9660;
+  --raw-flare-500: #e2793d;
+  --raw-flare-600: #c4632e;
+
+  --raw-hit-dark: #4f9a72;
+  --raw-hit-light: #2e7a50;
+  --raw-miss-dark: #c2635c;
+  --raw-miss-light: #a8433d;
+
+  /* ---- Type ---- */
+  --font-display: 'Archivo', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+
+  /* ---- Space / radius / motion ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-pill: 999px;
+
+  --motion-fast: 120ms ease;
+  --motion-base: 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+  }
+}
+
+/* ---- Semantic: dark theme (the default — "matchday under floodlights") ---- */
+:root,
+:root[data-theme='dark'] {
+  --color-bg: var(--raw-pitch-950);
+  --color-surface: var(--raw-pitch-900);
+  --color-surface-raised: var(--raw-pitch-800);
+  --color-border: var(--raw-pitch-700);
+  --color-divider: var(--raw-turf-600);
+
+  --color-text-primary: var(--raw-chalk-050);
+  --color-text-secondary: var(--raw-chalk-300);
+  --color-text-meta: var(--raw-slate-400);
+
+  --color-accent: var(--raw-flare-500);
+  --color-accent-hover: var(--raw-flare-400);
+  --color-accent-contrast: var(--raw-pitch-950);
+
+  --color-hit: var(--raw-hit-dark);
+  --color-miss: var(--raw-miss-dark);
+  --color-pending: var(--raw-slate-400);
+}
+
+/* ---- Semantic: light theme ("matchday, kickoff at noon") ---- */
+:root[data-theme='light'] {
+  --color-bg: var(--raw-chalk-050);
+  --color-surface: #ffffff;
+  --color-surface-raised: var(--raw-chalk-100);
+  --color-border: var(--raw-chalk-300);
+  --color-divider: var(--raw-turf-400);
+
+  --color-text-primary: var(--raw-pitch-950);
+  --color-text-secondary: var(--raw-slate-600);
+  --color-text-meta: var(--raw-slate-600);
+
+  --color-accent: var(--raw-flare-600);
+  --color-accent-hover: var(--raw-flare-500);
+  --color-accent-contrast: #ffffff;
+
+  --color-hit: var(--raw-hit-light);
+  --color-miss: var(--raw-miss-light);
+  --color-pending: var(--raw-slate-600);
+}
+
+/* System preference wins only when the user hasn't explicitly toggled
+   (App.tsx only ever sets data-theme to 'dark' or 'light', never removes
+   it once touched — this rule is the untouched-default path). */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --color-bg: var(--raw-chalk-050);
+    --color-surface: #ffffff;
+    --color-surface-raised: var(--raw-chalk-100);
+    --color-border: var(--raw-chalk-300);
+    --color-divider: var(--raw-turf-400);
+
+    --color-text-primary: var(--raw-pitch-950);
+    --color-text-secondary: var(--raw-slate-600);
+    --color-text-meta: var(--raw-slate-600);
+
+    --color-accent: var(--raw-flare-600);
+    --color-accent-hover: var(--raw-flare-500);
+    --color-accent-contrast: #ffffff;
+
+    --color-hit: var(--raw-hit-light);
+    --color-miss: var(--raw-miss-light);
+    --color-pending: var(--raw-slate-600);
+  }
+}
