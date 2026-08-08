@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 import typer
+from sqlalchemy import text as sql_text
 
 from ou25_pipeline.api.client import StatsAPIClient
 from ou25_pipeline.config import get_settings
@@ -173,6 +174,60 @@ def seed_tracked_competitions_cmd() -> None:
         typer.echo(f"Not in `competitions` yet, skipped: {', '.join(missing)}")
         typer.echo("Run the Competitions page's catalog sync, then re-run this command.")
         raise typer.Exit(code=1)
+
+
+@app.command("validate-competition")
+def validate_competition_cmd(
+    competition: list[str] = typer.Option(
+        None, help="`comp_...` ids to evaluate. Repeatable. Omit to scan every "
+                   "unvalidated competition with finished matches in the DB."
+    ),
+) -> None:
+    """Evaluate whether a competition earns entry into the rule's validated
+    set (`decision.VALIDATED_COMPETITIONS`) — the answer to "are we stuck
+    with the original 13 forever?" (no).
+
+    Because the rule's thresholds were frozen before ever seeing a
+    candidate's data, the candidate's entire stored history is
+    out-of-sample by construction. Criteria are pre-registered in
+    `market/validation.py` (>= 100 zone bets, positive edge, ROI > 0 with
+    P(ROI>0) >= 0.90). Reads only the database — zero API quota spent.
+
+    A PASS is a recommendation, not an auto-admit: add the id to
+    VALIDATED_COMPETITIONS in a new rule_version, so the change is a
+    deliberate, versioned decision like every other rule change.
+    """
+    from ou25_pipeline.market.decision import VALIDATED_COMPETITIONS
+    from ou25_pipeline.market.validation import MIN_ZONE_BETS, validate_competition
+
+    engine = get_engine()
+    targets = competition
+    if not targets:
+        with engine.connect() as conn:
+            rows = conn.execute(sql_text(
+                "SELECT DISTINCT competition_id FROM matches WHERE status = 'finished'"
+            )).scalars().all()
+        targets = sorted(set(rows) - VALIDATED_COMPETITIONS)
+        typer.echo(f"Scanning {len(targets)} unvalidated competition(s) with stored matches...\n")
+
+    passed = []
+    for competition_id in targets:
+        result = validate_competition(engine, competition_id)
+        typer.echo(f"{result.competition_id}: {result.verdict}")
+        typer.echo(f"  matches={result.n_matches} fitted={result.n_fitted} zone_bets={result.n_zone}"
+                   f" (need >= {MIN_ZONE_BETS})")
+        if result.verdict != "INSUFFICIENT_DATA":
+            typer.echo(f"  edge {result.edge_pp:+.2f}pp  ROI {result.roi:+.4f}"
+                       f"  CI [{result.ci_low:+.4f}, {result.ci_high:+.4f}]  P(ROI>0)={result.p_positive:.3f}")
+            for t in result.thirds:
+                typer.echo(f"    third {t['third']}: n={t['n']} roi {t['roi']:+.4f}")
+        typer.echo(f"  -> {result.detail}\n")
+        if result.verdict == "PASS":
+            passed.append(result.competition_id)
+
+    if passed:
+        typer.echo(f"PASSED: {', '.join(passed)}")
+        typer.echo("Add to decision.VALIDATED_COMPETITIONS and bump RULE_VERSION to admit.")
 
 
 @app.command()
